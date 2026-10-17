@@ -1,0 +1,81 @@
+# Fork test only, not for upstream: runs the RUN line of
+# validation-test/BuildSystem/android_cross_compile.test the way lit runs it on
+# ci.swift.org (build-script --dry-run | PathSanitizingFileCheck | FileCheck),
+# without building the compiler.
+name: "Fork test: android_cross_compile.test"
+
+on:
+  push:
+    branches: [fork-test-dry-run]
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - case: pr
+            expect: pass
+          - case: old-check
+            expect: fail
+          - case: no-fix
+            expect: fail
+    name: ${{ matrix.case }} (expect ${{ matrix.expect }})
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: swift-project/swift
+
+      - name: Install FileCheck and ninja
+        run: |
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y llvm-18-tools ninja-build > /dev/null
+          ls -la /usr/lib/llvm-18/bin/FileCheck
+          cmake --version | head -1
+
+      - name: Prepare the case
+        working-directory: swift-project/swift
+        run: |
+          case "${{ matrix.case }}" in
+            old-check)
+              sed -i 's/{{\.\*}}corelibs-foundation$/{{.*}}swift-corelibs-foundation/' validation-test/BuildSystem/android_cross_compile.test ;;
+            no-fix)
+              sed -i "/CMAKE_ANDROID_STL_TYPE/d" utils/swift_build_support/swift_build_support/targets.py ;;
+          esac
+          git diff --stat
+          grep -n "CMAKE_ANDROID_STL_TYPE" validation-test/BuildSystem/android_cross_compile.test utils/swift_build_support/swift_build_support/targets.py || true
+
+      - name: Run the test's RUN line
+        id: run
+        working-directory: swift-project
+        run: |
+          set +e
+          # build-script only checks that these source directories exist in a dry run.
+          mkdir -p swift-corelibs-foundation
+          TMP=$RUNNER_TEMP/android_cross_compile.test.tmp
+          for attempt in $(seq 20); do
+            rm -rf "$TMP" && mkdir -p "$TMP"
+            out=$(env SKIP_XCODE_VERSION_CHECK=1 SWIFT_BUILD_ROOT="$TMP" swift/utils/build-script --dry-run --cmake "$(command -v cmake)" --foundation --swift-testing --swift-testing-macros --install-foundation --install-swift-testing-macros --install-llvm --cross-compile-hosts=android-aarch64 --cross-compile-build-swift-tools=False --android --android-ndk "$TMP/ndk/" --android-arch aarch64 2>&1)
+            missing=$(echo "$out" | grep -oE "can't find source directory for [^ ]+ \(tried [^)]+\)" | sed -E 's/.*tried ([^)]+)\)/\1/')
+            [ -z "$missing" ] && break
+            echo "creating empty $missing"
+            mkdir -p "$missing"
+          done
+          echo "$out" | python3 swift/utils/PathSanitizingFileCheck --allow-unused-prefixes \
+            --sanitize TMP_DIR="$TMP" --sanitize BUILD_DIR="$TMP" --sanitize SOURCE_DIR="$PWD/swift" \
+            --ignore-runtime-warnings --use-filecheck /usr/lib/llvm-18/bin/FileCheck \
+            swift/validation-test/BuildSystem/android_cross_compile.test
+          status=$?
+          echo "FileCheck exit status: $status"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Compare with the expected result
+        run: |
+          status=${{ steps.run.outputs.status }}
+          if [[ "${{ matrix.expect }}" == pass && $status == 0 ]] || [[ "${{ matrix.expect }}" == fail && $status != 0 ]]; then
+            echo "As expected: ${{ matrix.expect }} (exit status $status)"
+          else
+            echo "::error::Expected ${{ matrix.expect }}, got exit status $status"
+            exit 1
+          fi
