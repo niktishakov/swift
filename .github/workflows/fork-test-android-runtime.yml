@@ -1,0 +1,51 @@
+name: Fork test - Runtime module on Android
+
+# Fork test only, not for upstream: builds stdlib/public/RuntimeModule for Android
+# x86_64 by hand and runs test/Backtracing tests on an emulator.
+
+on:
+  push:
+    branches: [fork-test-android-runtime]
+  workflow_dispatch:
+
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [28, 36]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github
+            include
+            stdlib/public/RuntimeModule
+            test/Backtracing
+      - name: Install Swift 6.4.1 and the Android SDK
+        run: |
+          curl -sSL https://download.swift.org/swift-6.4.1-release/ubuntu2404/swift-6.4.1-RELEASE/swift-6.4.1-RELEASE-ubuntu24.04.tar.gz | tar -xz -C $HOME
+          echo "$HOME/swift-6.4.1-RELEASE-ubuntu24.04/usr/bin" >> $GITHUB_PATH
+          export PATH=$HOME/swift-6.4.1-RELEASE-ubuntu24.04/usr/bin:$PATH
+          swift --version
+          swift sdk install https://download.swift.org/swift-6.4.1-release/android-sdk/swift-6.4.1-RELEASE/swift-6.4.1-RELEASE_android.artifactbundle.tar.gz --checksum a356b79f8f1daa6ae3a66f4c556966ca20c0208b3659805cf30a83a0a31d6772
+          echo "ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> $GITHUB_ENV
+          ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME bash $(find ~/.swiftpm/swift-sdks ~/.config/swiftpm/swift-sdks -name setup-android-sdk.sh 2>/dev/null | head -1)
+          pip install filecheck==1.0.1
+      - name: Build Runtime module and tests
+        run: bash .github/fork-test/build-runtime-android.sh x86_64 ${{ matrix.api }} $RUNNER_TEMP/out
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run tests on the emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          arch: x86_64
+          target: default
+          emulator-boot-timeout: 600
+          script: bash .github/fork-test/run-tests.sh ${{ runner.temp }}/out
