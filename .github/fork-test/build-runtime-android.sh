@@ -7,7 +7,8 @@ ARCH=$1; API=$2; OUT=$3
 TRIPLE=$ARCH-unknown-linux-android$API
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 R=$ROOT/stdlib/public/RuntimeModule
-SDK=$(find ~/.swiftpm/swift-sdks ~/.config/swiftpm/swift-sdks -maxdepth 2 -name swift-android -type d 2>/dev/null | head -1)
+SDK=$( (find ~/.swiftpm ~/.config/swiftpm -maxdepth 3 -name swift-android -type d 2>/dev/null || true) | head -1)
+[ -n "$SDK" ] || { echo 'Android Swift SDK not found'; exit 1; }
 NDKBIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
 NDKCLANG=$(ls -d $ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/lib/clang/* | head -1)
 RES=$SDK/swift-resources/usr/lib/swift-$ARCH

@@ -32,7 +32,7 @@ jobs:
           swift --version
           swift sdk install https://download.swift.org/swift-6.4.1-release/android-sdk/swift-6.4.1-RELEASE/swift-6.4.1-RELEASE_android.artifactbundle.tar.gz --checksum a356b79f8f1daa6ae3a66f4c556966ca20c0208b3659805cf30a83a0a31d6772
           echo "ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> $GITHUB_ENV
-          ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME bash $(find ~/.swiftpm/swift-sdks ~/.config/swiftpm/swift-sdks -name setup-android-sdk.sh 2>/dev/null | head -1)
+          ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME bash $( (find ~/.swiftpm ~/.config/swiftpm -name setup-android-sdk.sh 2>/dev/null || true) | head -1)
           pip install filecheck==1.0.1
       - name: Build Runtime module and tests
         run: bash .github/fork-test/build-runtime-android.sh x86_64 ${{ matrix.api }} $RUNNER_TEMP/out
