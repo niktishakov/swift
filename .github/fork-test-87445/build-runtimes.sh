@@ -43,6 +43,6 @@ cmake "${COMMON[@]}" -S Runtimes/Supplemental/Runtime -B $OUT/runtime -DSwiftCor
 ninja -C $OUT/runtime
 cmake "${COMMON[@]}" -S Runtimes/Supplemental/StackWalker -B $OUT/stackwalker -DSwiftCore_DIR=$OUT/core/cmake/SwiftCore \
   -DSwiftOverlay_DIR=$OUT/overlay/cmake/SwiftOverlay -DSwiftCxxOverlay_DIR=$OUT/overlay/Cxx/cmake/SwiftCxxOverlay \
-  -DSwiftRuntime_DIR=$OUT/runtime/cmake/SwiftRuntime "-DCMAKE_Swift_FLAGS=-gnone -use-ld=lld -static-stdlib -Xclang-linker -target -Xclang-linker $T -Xclang-linker --sysroot -Xclang-linker $SYS -Xclang-linker -resource-dir -Xclang-linker $PRE/lib/clang/$CLANGV"
+  -DSwiftRuntime_DIR=$OUT/runtime/cmake/SwiftRuntime "-DCMAKE_Swift_FLAGS=-gnone -use-ld=lld -Xclang-linker -target -Xclang-linker $T -Xclang-linker --sysroot -Xclang-linker $SYS -Xclang-linker -resource-dir -Xclang-linker $PRE/lib/clang/$CLANGV"
 ninja -C $OUT/stackwalker
 find $OUT -name 'libswiftRuntime.so' -o -name 'swift-backtrace' -type f | xargs file
