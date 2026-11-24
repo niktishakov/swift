@@ -25,6 +25,7 @@ jobs:
             include
             cmake
             utils
+            lib
       - name: Install the snapshot toolchain
         run: |
           curl -sSL https://download.swift.org/development/ubuntu2404/$SNAPSHOT/$SNAPSHOT-ubuntu24.04.tar.gz | tar -xz -C $HOME
