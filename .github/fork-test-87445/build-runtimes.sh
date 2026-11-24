@@ -28,7 +28,7 @@ COMMON=(-G Ninja -DCMAKE_BUILD_TYPE=Release
   -DSWIFT_ANDROID_LD_PATH=$TC/ld.lld -DCMAKE_PROJECT_INCLUDE=$ROOT/utils/android-overrides.cmake
   -DSWIFT_ANDROID_NDK_PATH=$NDK -DCMAKE_EXECUTABLE_FORMAT=ELF
   -DBUILD_SHARED_LIBS=YES -DCMAKE_STATIC_LIBRARY_PREFIX_Swift=lib -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=YES
-  -DCMAKE_INSTALL_PREFIX=$OUT/install)
+  -DCMAKE_LINKER_TYPE=LLD -DCMAKE_INSTALL_PREFIX=$OUT/install)
 cmake "${COMMON[@]}" -S Runtimes/Core -B $OUT/core -DCMAKE_NINJA_FORCE_RESPONSE_FILE=YES \
   -DSwiftCore_ENABLE_ENVIRONMENT=YES -DSwiftCore_ENABLE_BACKTRACING=YES -DSwiftCore_ENABLE_CONCURRENCY=NO \
   -DSwiftCore_ENABLE_REMOTE_MIRROR=YES -DSwiftCore_ENABLE_LIBRARY_EVOLUTION=NO
@@ -42,6 +42,6 @@ cmake "${COMMON[@]}" -S Runtimes/Supplemental/Runtime -B $OUT/runtime -DSwiftCor
 ninja -C $OUT/runtime
 cmake "${COMMON[@]}" -S Runtimes/Supplemental/StackWalker -B $OUT/stackwalker -DSwiftCore_DIR=$OUT/core/cmake/SwiftCore \
   -DSwiftOverlay_DIR=$OUT/overlay/cmake/SwiftOverlay -DSwiftCxxOverlay_DIR=$OUT/overlay/Cxx/cmake/SwiftCxxOverlay \
-  -DSwiftRuntime_DIR=$OUT/runtime/cmake/SwiftRuntime "-DCMAKE_Swift_FLAGS=-gnone -static-stdlib"
+  -DSwiftRuntime_DIR=$OUT/runtime/cmake/SwiftRuntime "-DCMAKE_Swift_FLAGS=-gnone -static-stdlib -Xclang-linker -target -Xclang-linker $T -Xclang-linker --sysroot -Xclang-linker $SYS -Xclang-linker -resource-dir -Xclang-linker $PRE/lib/clang/$CLANGV"
 ninja -C $OUT/stackwalker
 find $OUT -name 'libswiftRuntime.so' -o -name 'swift-backtrace' -type f | xargs file

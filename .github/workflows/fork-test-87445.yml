@@ -5,112 +5,13 @@ name: Fork test - Android crash handler (87445)
 
 on:
   push:
-    branches: [fork-test-87445]
+    branches: [fork-test-87445-rt]
   workflow_dispatch:
 
 env:
   SNAPSHOT: swift-DEVELOPMENT-SNAPSHOT-2026-11-01-a
 
 jobs:
-  build-ps1-parse:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          sparse-checkout: utils/build.ps1
-      - name: Parse build.ps1
-        shell: pwsh
-        run: |
-          $errors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile("$PWD/utils/build.ps1", [ref]$null, [ref]$errors) | Out-Null
-          "parse errors: $($errors.Count)"
-          $errors | ForEach-Object { $_.ToString() }
-          if ($errors.Count -gt 0) { exit 1 }
-
-  sdk:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 240
-    steps:
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
-          df -h /
-      - name: Get swift-docker
-        run: git clone --depth 1 https://github.com/swiftlang/swift-docker $RUNNER_TEMP/swift-docker
-      - name: Use this branch and install libexec
-        working-directory: ${{ runner.temp }}/swift-docker/swift-ci/sdks/android
-        run: |
-          # After the sources are fetched at the snapshot tag, switch swift to this branch.
-          perl -0pi -e 's#(\./scripts/fetch-source\.sh --source-dir \$\{WORKDIR\}/source\n)#$1(cd \${WORKDIR}/source/swift-project/swift && git fetch --depth 3 https://github.com/${{ github.repository }} ${{ github.sha }} && git checkout -q FETCH_HEAD && git log --oneline -3)\n#' build-local
-          sed -i "s/--swift-install-components='compiler;clang-resource-dir-symlink;license;stdlib;sdk-overlay'/--swift-install-components='compiler;clang-resource-dir-symlink;license;stdlib;sdk-overlay;libexec'/" scripts/build.sh
-          git diff
-      - name: Build the Android SDK (x86_64)
-        working-directory: ${{ runner.temp }}/swift-docker/swift-ci/sdks/android
-        run: TARGET_ARCHS=x86_64 ./build-local tag:$SNAPSHOT $RUNNER_TEMP/w
-      - name: Check the SDK
-        run: |
-          cd $RUNNER_TEMP/w
-          ls products
-          B=$(find products -name '*.artifactbundle.tar.gz' | head -1)
-          mkdir -p check && tar -xzf $B -C check
-          find check -name 'swift-backtrace*' -o -name 'libswiftRuntime.so' | sed 's/^/found: /'
-          CORE=$(find check -path '*swift-x86_64/android/libswiftCore.so' | head -1)
-          echo "core: $CORE"
-          strings -a $CORE | grep -c 'debuggerd' || true
-          nm -D --defined-only $CORE | grep -c _swift_installCrashHandler || true
-      - uses: actions/upload-artifact@v4
-        with:
-          name: android-sdk-x86_64
-          path: ${{ runner.temp }}/w/products/*.artifactbundle.tar.gz
-          retention-days: 2
-
-  emulator:
-    needs: sdk
-    runs-on: ubuntu-24.04
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        api: [28, 33]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          sparse-checkout: .github
-      - uses: actions/download-artifact@v4
-        with:
-          name: android-sdk-x86_64
-          path: ${{ runner.temp }}/sdk
-      - name: Install the snapshot toolchain and the SDK
-        run: |
-          curl -sSL https://download.swift.org/development/ubuntu2404/$SNAPSHOT/$SNAPSHOT-ubuntu24.04.tar.gz | tar -xz -C $HOME
-          echo "$HOME/$SNAPSHOT-ubuntu24.04/usr/bin" >> $GITHUB_PATH
-          export PATH=$HOME/$SNAPSHOT-ubuntu24.04/usr/bin:$PATH
-          swift sdk install $(ls $RUNNER_TEMP/sdk/*.tar.gz)
-          swift sdk list
-          echo "ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> $GITHUB_ENV
-          ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME bash $( (find ~/.swiftpm ~/.config/swiftpm -name setup-android-sdk.sh 2>/dev/null || true) | head -1)
-      - name: Build the crash program
-        run: bash .github/fork-test-87445/build-crash.sh $RUNNER_TEMP/out
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-      - name: Crash tests on the emulator
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: ${{ matrix.api }}
-          arch: x86_64
-          target: default
-          emulator-boot-timeout: 600
-          script: bash .github/fork-test-87445/run-crash.sh ${{ runner.temp }}/out
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: crash-results-api${{ matrix.api }}
-          path: ${{ runner.temp }}/out/results
-          retention-days: 7
-
   runtimes:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
