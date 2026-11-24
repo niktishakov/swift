@@ -23,7 +23,7 @@ COMMON=(-G Ninja -DCMAKE_BUILD_TYPE=Release
   -DCMAKE_ANDROID_NDK=$NDK -DCMAKE_SYSROOT=$SYS
   -DCMAKE_C_COMPILER=$PRE/bin/clang -DCMAKE_CXX_COMPILER=$PRE/bin/clang++
   -DCMAKE_C_COMPILER_TARGET=$T -DCMAKE_CXX_COMPILER_TARGET=$T
-  -DCMAKE_Swift_COMPILER=$TC/swiftc -DCMAKE_Swift_COMPILER_TARGET=$T -DCMAKE_Swift_COMPILER_ID=Apple
+  -DCMAKE_Swift_COMPILER=$TC/swiftc -DCMAKE_Swift_COMPILER_TARGET=$T -DCMAKE_Swift_COMPILER_ID=Apple -DCMAKE_Swift_COMPILER_WORKS=YES
   "-DCMAKE_Swift_FLAGS=-gnone -use-ld=lld -Xclang-linker -target -Xclang-linker $T -Xclang-linker --sysroot -Xclang-linker $SYS -Xclang-linker -resource-dir -Xclang-linker $PRE/lib/clang/$CLANGV"
   "-DCMAKE_SHARED_LINKER_FLAGS=$LF" "-DCMAKE_EXE_LINKER_FLAGS=$LF -Xlinker --gc-sections" "-DCMAKE_MODULE_LINKER_FLAGS=$LF"
   -DSWIFT_ANDROID_LD_PATH=$PRE/bin/ld.lld -DCMAKE_PROJECT_INCLUDE=$ROOT/utils/android-overrides.cmake
