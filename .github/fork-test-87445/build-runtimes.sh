@@ -23,12 +23,12 @@ COMMON=(-G Ninja -DCMAKE_BUILD_TYPE=Release
   -DCMAKE_C_COMPILER=$TC/clang -DCMAKE_CXX_COMPILER=$TC/clang++
   -DCMAKE_C_COMPILER_TARGET=$T -DCMAKE_CXX_COMPILER_TARGET=$T
   -DCMAKE_Swift_COMPILER=$TC/swiftc -DCMAKE_Swift_COMPILER_TARGET=$T -DCMAKE_Swift_COMPILER_ID=Apple
-  "-DCMAKE_Swift_FLAGS=-gnone -Xclang-linker -target -Xclang-linker $T -Xclang-linker --sysroot -Xclang-linker $SYS -Xclang-linker -resource-dir -Xclang-linker $PRE/lib/clang/$CLANGV"
+  "-DCMAKE_Swift_FLAGS=-gnone -use-ld=lld -Xclang-linker -target -Xclang-linker $T -Xclang-linker --sysroot -Xclang-linker $SYS -Xclang-linker -resource-dir -Xclang-linker $PRE/lib/clang/$CLANGV"
   "-DCMAKE_SHARED_LINKER_FLAGS=$LF" "-DCMAKE_EXE_LINKER_FLAGS=$LF -Xlinker --gc-sections" "-DCMAKE_MODULE_LINKER_FLAGS=$LF"
   -DSWIFT_ANDROID_LD_PATH=$TC/ld.lld -DCMAKE_PROJECT_INCLUDE=$ROOT/utils/android-overrides.cmake
   -DSWIFT_ANDROID_NDK_PATH=$NDK -DCMAKE_EXECUTABLE_FORMAT=ELF
   -DBUILD_SHARED_LIBS=YES -DCMAKE_STATIC_LIBRARY_PREFIX_Swift=lib -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=YES
-  -DCMAKE_LINKER_TYPE=LLD -DCMAKE_INSTALL_PREFIX=$OUT/install)
+  -DCMAKE_C_FLAGS=-fuse-ld=lld -DCMAKE_CXX_FLAGS=-fuse-ld=lld -DCMAKE_INSTALL_PREFIX=$OUT/install)
 cmake "${COMMON[@]}" -S Runtimes/Core -B $OUT/core -DCMAKE_NINJA_FORCE_RESPONSE_FILE=YES \
   -DSwiftCore_ENABLE_ENVIRONMENT=YES -DSwiftCore_ENABLE_BACKTRACING=YES -DSwiftCore_ENABLE_CONCURRENCY=NO \
   -DSwiftCore_ENABLE_REMOTE_MIRROR=YES -DSwiftCore_ENABLE_LIBRARY_EVOLUTION=NO
@@ -42,6 +42,6 @@ cmake "${COMMON[@]}" -S Runtimes/Supplemental/Runtime -B $OUT/runtime -DSwiftCor
 ninja -C $OUT/runtime
 cmake "${COMMON[@]}" -S Runtimes/Supplemental/StackWalker -B $OUT/stackwalker -DSwiftCore_DIR=$OUT/core/cmake/SwiftCore \
   -DSwiftOverlay_DIR=$OUT/overlay/cmake/SwiftOverlay -DSwiftCxxOverlay_DIR=$OUT/overlay/Cxx/cmake/SwiftCxxOverlay \
-  -DSwiftRuntime_DIR=$OUT/runtime/cmake/SwiftRuntime "-DCMAKE_Swift_FLAGS=-gnone -static-stdlib -Xclang-linker -target -Xclang-linker $T -Xclang-linker --sysroot -Xclang-linker $SYS -Xclang-linker -resource-dir -Xclang-linker $PRE/lib/clang/$CLANGV"
+  -DSwiftRuntime_DIR=$OUT/runtime/cmake/SwiftRuntime "-DCMAKE_Swift_FLAGS=-gnone -use-ld=lld -static-stdlib -Xclang-linker -target -Xclang-linker $T -Xclang-linker --sysroot -Xclang-linker $SYS -Xclang-linker -resource-dir -Xclang-linker $PRE/lib/clang/$CLANGV"
 ninja -C $OUT/stackwalker
 find $OUT -name 'libswiftRuntime.so' -o -name 'swift-backtrace' -type f | xargs file
