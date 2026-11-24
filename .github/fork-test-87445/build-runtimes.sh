@@ -2,7 +2,8 @@
 # Builds Runtimes/Core, Overlay, Supplemental/Runtime and Supplemental/StackWalker
 # for Android x86_64 with the CMake settings that utils/build.ps1 uses for
 # Android (Build-CMakeProject, Build-SDK), so the build.ps1 path is exercised
-# without Windows. Differences: Linux host, Core without Concurrency (that
+# without Windows. Differences: Linux host, the NDK's clang for C and C++
+# (build.ps1 builds compiler-rt for its own clang), Core without Concurrency (that
 # needs a dispatch build), StackWalker is not built by build.ps1 for Android.
 set -euxo pipefail
 NDK=$1; OUT=$2
@@ -20,15 +21,15 @@ LF="-Xlinker --build-id=sha1 -Xlinker --no-rosegment -Xlinker --no-undefined-ver
 COMMON=(-G Ninja -DCMAKE_BUILD_TYPE=Release
   -DCMAKE_SYSTEM_NAME=Android -DCMAKE_ANDROID_API=28 -DCMAKE_ANDROID_ARCH_ABI=x86_64
   -DCMAKE_ANDROID_NDK=$NDK -DCMAKE_SYSROOT=$SYS
-  -DCMAKE_C_COMPILER=$TC/clang -DCMAKE_CXX_COMPILER=$TC/clang++
+  -DCMAKE_C_COMPILER=$PRE/bin/clang -DCMAKE_CXX_COMPILER=$PRE/bin/clang++
   -DCMAKE_C_COMPILER_TARGET=$T -DCMAKE_CXX_COMPILER_TARGET=$T
   -DCMAKE_Swift_COMPILER=$TC/swiftc -DCMAKE_Swift_COMPILER_TARGET=$T -DCMAKE_Swift_COMPILER_ID=Apple
   "-DCMAKE_Swift_FLAGS=-gnone -use-ld=lld -Xclang-linker -target -Xclang-linker $T -Xclang-linker --sysroot -Xclang-linker $SYS -Xclang-linker -resource-dir -Xclang-linker $PRE/lib/clang/$CLANGV"
   "-DCMAKE_SHARED_LINKER_FLAGS=$LF" "-DCMAKE_EXE_LINKER_FLAGS=$LF -Xlinker --gc-sections" "-DCMAKE_MODULE_LINKER_FLAGS=$LF"
-  -DSWIFT_ANDROID_LD_PATH=$TC/ld.lld -DCMAKE_PROJECT_INCLUDE=$ROOT/utils/android-overrides.cmake
+  -DSWIFT_ANDROID_LD_PATH=$PRE/bin/ld.lld -DCMAKE_PROJECT_INCLUDE=$ROOT/utils/android-overrides.cmake
   -DSWIFT_ANDROID_NDK_PATH=$NDK -DCMAKE_EXECUTABLE_FORMAT=ELF
   -DBUILD_SHARED_LIBS=YES -DCMAKE_STATIC_LIBRARY_PREFIX_Swift=lib -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=YES
-  -DCMAKE_C_FLAGS=-fuse-ld=lld -DCMAKE_CXX_FLAGS=-fuse-ld=lld -DCMAKE_INSTALL_PREFIX=$OUT/install)
+  -DCMAKE_INSTALL_PREFIX=$OUT/install)
 cmake "${COMMON[@]}" -S Runtimes/Core -B $OUT/core -DCMAKE_NINJA_FORCE_RESPONSE_FILE=YES \
   -DSwiftCore_ENABLE_ENVIRONMENT=YES -DSwiftCore_ENABLE_BACKTRACING=YES -DSwiftCore_ENABLE_CONCURRENCY=NO \
   -DSwiftCore_ENABLE_REMOTE_MIRROR=YES -DSwiftCore_ENABLE_LIBRARY_EVOLUTION=NO
