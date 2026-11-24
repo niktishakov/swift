@@ -13,11 +13,11 @@ P
 SDKID=$(swift sdk list | grep -i android | head -1)
 cd $OUT/pkg && swift build --swift-sdk x86_64-unknown-linux-android28 -c debug
 cp .build/debug/crash $OUT/push/
-BUNDLE=$(find ~/.swiftpm ~/.config/swiftpm -maxdepth 3 -name '*android*.artifactbundle' -type d 2>/dev/null | head -1)
+BUNDLE=$( (find ~/.swiftpm ~/.config/swiftpm -maxdepth 3 -name '*android*.artifactbundle' -type d 2>/dev/null || true) | head -1)
 echo "bundle: $BUNDLE"
 find $BUNDLE -path '*swift-x86_64/android/*.so' -exec cp {} $OUT/push/ \;
-find $ANDROID_NDK_HOME -path '*x86_64-linux-android/libc++_shared.so' | head -1 | xargs -I{} cp {} $OUT/push/
-BT=$(find $BUNDLE -name swift-backtrace -type f | head -1)
+cp $(find $ANDROID_NDK_HOME -path '*x86_64-linux-android/libc++_shared.so' | head -1) $OUT/push/
+BT=$( (find $BUNDLE -name swift-backtrace -type f || true) | head -1)
 echo "swift-backtrace in the SDK: ${BT:-none}"
 test -n "$BT"
 cp $BT $OUT/push/
