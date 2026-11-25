@@ -41,6 +41,18 @@ cmake "${COMMON[@]}" -S Runtimes/Supplemental/Runtime -B $OUT/runtime -DSwiftCor
   -DSwiftOverlay_DIR=$OUT/overlay/cmake/SwiftOverlay -DSwiftCxxOverlay_DIR=$OUT/overlay/Cxx/cmake/SwiftCxxOverlay \
   -DSwiftRuntime_ENABLE_LIBRARY_EVOLUTION=NO -DSwiftRuntime_ENABLE_BACKTRACING=YES
 ninja -C $OUT/runtime
+# What build.ps1 installs into the SDK: the dynamic and the static Runtime module, and Synchronization to compare.
+cmake --install $OUT/runtime --prefix $OUT/inst-dynamic
+cmake "${COMMON[@]}" -S Runtimes/Supplemental/Runtime -B $OUT/runtime-static -DSwiftCore_DIR=$OUT/core/cmake/SwiftCore \
+  -DSwiftOverlay_DIR=$OUT/overlay/cmake/SwiftOverlay -DSwiftCxxOverlay_DIR=$OUT/overlay/Cxx/cmake/SwiftCxxOverlay \
+  -DSwiftRuntime_ENABLE_LIBRARY_EVOLUTION=NO -DSwiftRuntime_ENABLE_BACKTRACING=YES -DBUILD_SHARED_LIBS=NO
+ninja -C $OUT/runtime-static
+cmake --install $OUT/runtime-static --prefix $OUT/inst-static
+cmake "${COMMON[@]}" -S Runtimes/Supplemental/Synchronization -B $OUT/sync -DSwiftCore_DIR=$OUT/core/cmake/SwiftCore \
+  -DSwiftOverlay_DIR=$OUT/overlay/cmake/SwiftOverlay -DSwiftSynchronization_ENABLE_LIBRARY_EVOLUTION=NO
+ninja -C $OUT/sync && cmake --install $OUT/sync --prefix $OUT/inst-dynamic
+echo "=== installed Runtime and Synchronization files"
+(cd $OUT && find inst-dynamic inst-static -type f \( -path '*Runtime*' -o -path '*Synchronization*' \) -not -path '*/cmake/*' | sort)
 cmake "${COMMON[@]}" -S Runtimes/Supplemental/StackWalker -B $OUT/stackwalker -DSwiftCore_DIR=$OUT/core/cmake/SwiftCore \
   -DSwiftOverlay_DIR=$OUT/overlay/cmake/SwiftOverlay -DSwiftCxxOverlay_DIR=$OUT/overlay/Cxx/cmake/SwiftCxxOverlay \
   -DSwiftRuntime_DIR=$OUT/runtime/cmake/SwiftRuntime "-DCMAKE_Swift_FLAGS=-gnone -use-ld=lld -Xclang-linker -target -Xclang-linker $T -Xclang-linker --sysroot -Xclang-linker $SYS -Xclang-linker -resource-dir -Xclang-linker $PRE/lib/clang/$CLANGV"
