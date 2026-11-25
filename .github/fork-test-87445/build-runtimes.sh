@@ -12,14 +12,16 @@ TC=$(dirname $(which swiftc))
 PRE=$NDK/toolchains/llvm/prebuilt/linux-x86_64
 SYS=$PRE/sysroot
 CLANGV=$(ls $PRE/lib/clang | head -1)
-T=x86_64-unknown-linux-android28
+ARCH=${ARCH:-x86_64}
+ABI=$([ $ARCH = i686 ] && echo x86 || echo $ARCH)
+T=$ARCH-unknown-linux-android28
 pip install --user -q cmake==4.4.1 || pip install --user -q 'cmake>=4,<4.5'
 export PATH=$HOME/.local/bin:$PATH
 cmake --version
 (cd Runtimes && cmake -P Resync.cmake)
 LF="-Xlinker --build-id=sha1 -Xlinker --no-rosegment -Xlinker --no-undefined-version -Xlinker --fatal-warnings -Xlinker --gc-sections -Xlinker --no-undefined"
 COMMON=(-G Ninja -DCMAKE_BUILD_TYPE=Release
-  -DCMAKE_SYSTEM_NAME=Android -DCMAKE_ANDROID_API=28 -DCMAKE_ANDROID_ARCH_ABI=x86_64
+  -DCMAKE_SYSTEM_NAME=Android -DCMAKE_ANDROID_API=28 -DCMAKE_ANDROID_ARCH_ABI=$ABI
   -DCMAKE_ANDROID_NDK=$NDK -DCMAKE_SYSROOT=$SYS
   -DCMAKE_C_COMPILER=$PRE/bin/clang -DCMAKE_CXX_COMPILER=$PRE/bin/clang++
   -DCMAKE_C_COMPILER_TARGET=$T -DCMAKE_CXX_COMPILER_TARGET=$T

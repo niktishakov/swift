@@ -14,6 +14,10 @@ env:
 jobs:
   runtimes:
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [i686, x86_64]
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
@@ -32,4 +36,4 @@ jobs:
           echo "$HOME/$SNAPSHOT-ubuntu24.04/usr/bin" >> $GITHUB_PATH
           sudo apt-get install -y ninja-build
       - name: Build Core, Overlay, Runtime and StackWalker for Android (the build.ps1 path)
-        run: bash .github/fork-test-87445/build-runtimes.sh $ANDROID_NDK_LATEST_HOME $RUNNER_TEMP/rt
+        run: ARCH=${{ matrix.arch }} bash .github/fork-test-87445/build-runtimes.sh $ANDROID_NDK_LATEST_HOME $RUNNER_TEMP/rt
