@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [i686]
+        arch: [armv7, i686, x86_64, aarch64]
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4

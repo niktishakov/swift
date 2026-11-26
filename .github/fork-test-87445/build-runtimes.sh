@@ -13,8 +13,12 @@ PRE=$NDK/toolchains/llvm/prebuilt/linux-x86_64
 SYS=$PRE/sysroot
 CLANGV=$(ls $PRE/lib/clang | head -1)
 ARCH=${ARCH:-x86_64}
-ABI=$([ $ARCH = i686 ] && echo x86 || echo $ARCH)
-T=$ARCH-unknown-linux-android28
+case $ARCH in
+  i686) ABI=x86; T=i686-unknown-linux-android28 ;;
+  armv7) ABI=armeabi-v7a; T=armv7-unknown-linux-androideabi28 ;;
+  aarch64) ABI=arm64-v8a; T=aarch64-unknown-linux-android28 ;;
+  *) ABI=$ARCH; T=$ARCH-unknown-linux-android28 ;;
+esac
 pip install --user -q cmake==4.4.1 || pip install --user -q 'cmake>=4,<4.5'
 export PATH=$HOME/.local/bin:$PATH
 cmake --version

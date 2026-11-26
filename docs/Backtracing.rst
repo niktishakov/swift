@@ -129,6 +129,17 @@ follows:
 |                 |         | process before starting to gather a crash log.   |
 |                 |         | (This does nothing on Windows.)                  |
 +-----------------+---------+--------------------------------------------------+
+| hook-fail-fast  | false   | Windows only.  Intercept calls to                |
+|                 |         | ``RaiseFailFastException()`` so that a backtrace |
+|                 |         | is generated before the process terminates.      |
+|                 |         | Some frameworks (e.g. WinUI) use this to         |
+|                 |         | terminate the process when an exception occurs   |
+|                 |         | in an event handler, which bypasses the normal   |
+|                 |         | crash handler.  This works by patching import    |
+|                 |         | address tables, and means running code in a      |
+|                 |         | process that has asked to terminate immediately, |
+|                 |         | so it is not enabled by default.                 |
++-----------------+---------+--------------------------------------------------+
 
 (*) On macOS 26 and later, this defaults to ``tty`` rather than ``yes``. On
     earlier versions, the default is ``no``.
@@ -351,10 +362,9 @@ Android
 
 Crash catching is not enabled by default on Android, because the system already
 writes a crash report (a tombstone) for every crashing process.  You can enable
-it by setting ``SWIFT_BACKTRACE`` to ``enable=yes``, which is useful for
-programs you run from ``adb shell``, such as test runners.  You will also need
-to copy ``swift-backtrace`` to the device and pass its location with
-``SWIFT_BACKTRACE=swift-backtrace=<path-to-swift-backtrace>``.
+it for programs you run from ``adb shell``, such as test runners: copy
+``swift-backtrace`` to the device and set
+``SWIFT_BACKTRACE=enable=yes,swift-backtrace=<path-to-swift-backtrace>``.
 
 The runtime installs its signal handlers over the ones installed by the system,
 and passes the signal back to them after the backtrace, so the tombstone is
